@@ -1,39 +1,53 @@
 package parser
 
 import (
-	"bufio"
-	"io"
+	"strings"
+
+	"github.com/samdfonseca/hw-samdfonseca/v2/tree"
 )
 
-type Parser struct {
-	*bufio.Scanner
+type Nodeable interface {
+	Node() (*tree.Node, error)
 }
 
-func splitAtoms(data []byte, atEOF bool) (int, []byte, error) {
-	if data[0] == 'C' {
-		return 1, data[0:1], nil
-	}
-	if data[0] == '(' {
-		open := 1
-		for i := 1; i < len(data); i++ {
-			if data[i] == '(' {
-				open += 1
-			} else if data[i] == ')' {
-				open -= 1
+type Parser struct {
+	l    *Lexer
+	root *tree.Node
+}
+
+func NewParser(s string) *Parser {
+	l := NewLexer(strings.NewReader(s))
+	return &Parser{l, nil}
+}
+
+func (p *Parser) Parse() error {
+	var current *tree.Node
+	var parent *tree.Node
+	for token, err := p.l.Next(); token != nil && err == nil; token, err = p.l.Next() {
+		if token.Type == ATOM {
+			current = &tree.Node{
+				Symbol: token.Value,
+				Bonds:  make([]*tree.Node, 0, 4),
 			}
-			if open == 0 {
-				return i + 1, data[:i+1], nil
+			if p.root == nil {
+				p.root = current
+				parent = current
+				continue
 			}
+			parent.Insert(current)
+			parent = current
+		} else if token.Type == BRANCH {
+			sub := NewParser(token.Value)
+			if err := sub.Parse(); err != nil {
+				return err
+			}
+			current = sub.Root()
+			parent.Insert(current)
 		}
 	}
-	if !atEOF {
-		return 0, nil, nil
-	}
-	return 0, data, bufio.ErrFinalToken
+	return nil
 }
 
-func New(r io.Reader) *Parser {
-	s := bufio.NewScanner(r)
-	s.Split(splitAtoms)
-	return &Parser{s}
+func (p *Parser) Root() *tree.Node {
+	return p.root
 }
