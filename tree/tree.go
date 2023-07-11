@@ -29,15 +29,17 @@ func (n *Node) NextNodeInLongestChain() *Node {
 	if len(n.Bonds) == 1 {
 		return n.Bonds[0]
 	}
-	max := 0
-	var next *Node
-	for _, b := range n.Bonds {
-		if l := b.LongestChainLength(); l > max {
-			next = b
-			max = l
+	p := n.Bonds[0]
+	for i := 1; i < len(n.Bonds); i++ {
+		if p.LongestChainLength() == n.Bonds[i].LongestChainLength() {
+			if len(p.Branches()) < len(n.Bonds[i].Branches()) {
+				p = n.Bonds[i]
+			}
+		} else if p.LongestChainLength() < n.Bonds[i].LongestChainLength() {
+			p = n.Bonds[i]
 		}
 	}
-	return next
+	return p
 }
 
 func (n *Node) Branches() []*Node {
@@ -45,17 +47,18 @@ func (n *Node) Branches() []*Node {
 		return nil
 	}
 	branches := make([]*Node, 0, 2)
-	max := 0
-	var next *Node
-	for _, b := range n.Bonds {
-		if l := b.LongestChainLength(); l > max {
-			if next != nil {
-				branches = append(branches, b)
+	p := n.Bonds[0]
+	for i := 1; i < len(n.Bonds); i++ {
+		if p.LongestChainLength() == n.Bonds[i].LongestChainLength() {
+			if len(p.Branches()) < len(n.Bonds[i].Branches()) {
+				branches = append(branches, p)
+				p = n.Bonds[i]
 			}
-			next = b
-			max = l
+		} else if p.LongestChainLength() < n.Bonds[i].LongestChainLength() {
+			branches = append(branches, p)
+			p = n.Bonds[i]
 		} else {
-			branches = append(branches, b)
+			branches = append(branches, n.Bonds[i])
 		}
 	}
 	return branches
