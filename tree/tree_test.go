@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestTreeInsert(t *testing.T) {
+func TestNodeInsert(t *testing.T) {
 	n := &Node{Symbol: "C", Bonds: make([]*Node, 0, 4)}
 	n1 := &Node{Symbol: "C1", Bonds: make([]*Node, 0, 4)}
 	n.Insert(n1)
@@ -17,7 +17,7 @@ func TestTreeInsert(t *testing.T) {
 	}
 }
 
-func TestTreeLongestChainLength(t *testing.T) {
+func TestNodeLongestChainLength(t *testing.T) {
 	root := &Node{Symbol: "C0", Bonds: make([]*Node, 0, 4)}
 	n := root
 	for i := 1; i < 6; i++ {
@@ -34,7 +34,7 @@ func TestTreeLongestChainLength(t *testing.T) {
 	}
 }
 
-func TestTreeBranches(t *testing.T) {
+func TestNodeBranches(t *testing.T) {
 	root := &Node{Symbol: "C0", Bonds: make([]*Node, 0, 4)}
 	n := root
 	for i := 1; i < 6; i++ {
@@ -62,7 +62,7 @@ func TestTreeBranches(t *testing.T) {
 	}
 }
 
-func TestTreeNextNodeInLongestChain(t *testing.T) {
+func TestNodeNextNodeInLongestChain(t *testing.T) {
 	root := &Node{Symbol: "C0", Bonds: make([]*Node, 0, 4)}
 	n := root
 	for i := 1; i < 6; i++ {
@@ -80,6 +80,51 @@ func TestTreeNextNodeInLongestChain(t *testing.T) {
 		n = n.NextNodeInLongestChain()
 		if n.Symbol != fmt.Sprintf("C%d", i) {
 			t.Errorf("incorrect symbol, expected: %s, actual: %s\n", fmt.Sprintf("C%d", i), n.Symbol)
+		}
+	}
+}
+
+func TestNodeBranchLocations(t *testing.T) {
+	root := &Node{Symbol: "C0", Bonds: make([]*Node, 0, 4)}
+	n := root
+	for i := 1; i < 8; i++ {
+		n.Insert(&Node{Symbol: fmt.Sprintf("C%d", i), Bonds: make([]*Node, 0, 4)})
+		n = n.Bonds[0]
+	}
+	branch := &Node{Symbol: "B1-1", Bonds: make([]*Node, 0, 4)}
+	branch.Insert(&Node{Symbol: "B1-2", Bonds: make([]*Node, 0, 4)})
+	root.Bonds[0].Bonds[0].Insert(branch)
+	branch = &Node{Symbol: "B2-1", Bonds: make([]*Node, 0, 4)}
+	root.Bonds[0].Bonds[0].Bonds[0].Bonds[0].Bonds[0].Bonds[0].Insert(branch)
+
+	branchLocations := root.BranchLocations()
+	if branchLocations[1][0] != 2 {
+		t.Errorf("incorrect branch location, expected: 2, actual: %d\n", branchLocations[1][0])
+	}
+	if branchLocations[2][0] != 6 {
+		t.Errorf("incorrect branch location, expected: 6, actual: %d\n", branchLocations[2][0])
+	}
+}
+
+func TestNodeBuildParentChain(t *testing.T) {
+	root := &Node{Symbol: "C0", Bonds: make([]*Node, 0, 4)}
+	n := root
+	for i := 1; i < 8; i++ {
+		n.Insert(&Node{Symbol: fmt.Sprintf("C%d", i), Bonds: make([]*Node, 0, 4)})
+		n = n.Bonds[0]
+	}
+	branch := &Node{Symbol: "B1-1", Bonds: make([]*Node, 0, 4)}
+	branch.Insert(&Node{Symbol: "B1-2", Bonds: make([]*Node, 0, 4)})
+	root.Bonds[0].Bonds[0].Insert(branch)
+	branch = &Node{Symbol: "B2-1", Bonds: make([]*Node, 0, 4)}
+	root.Bonds[0].Bonds[0].Bonds[0].Bonds[0].Bonds[0].Bonds[0].Insert(branch)
+
+	chain := []*Node{}
+	chain = root.BuildParentChain(chain)
+	for i := 0; i < 8; i++ {
+		n = chain[i]
+		if n.Symbol != fmt.Sprintf("C%d", i) {
+			t.Errorf("incorrect symbol, expected: C%d, actual: %s", i, n.Symbol)
 		}
 	}
 }

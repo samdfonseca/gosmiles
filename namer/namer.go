@@ -1,9 +1,11 @@
 package namer
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 
-	"github.com/samdfonseca/hw-samdfonseca/v2/parser"
+	"github.com/samdfonseca/hw-samdfonseca/v2/tree"
 )
 
 var (
@@ -71,32 +73,123 @@ var (
 )
 
 type Namer struct {
-	Smiles string
+	Node   *tree.Node
+	Branch bool
 }
 
-func New(smiles string) *Namer {
-	return &Namer{smiles}
+func New(node *tree.Node, branch bool) *Namer {
+	return &Namer{node, branch}
 }
 
 func (n *Namer) SystematicName() (string, error) {
-	p := parser.NewParser(n.Smiles)
-	if err := p.Parse(); err != nil {
-		return "", err
+	root := n.Node
+	chain := root.BuildParentChain([]*tree.Node{})
+	lchain := len(chain)
+	parentNamePrefix := ""
+	if lchain <= 20 {
+		parentNamePrefix = PREFIXES[lchain]
+	} else {
+		parentNamePrefix = NumericalTerm(lchain)
 	}
-	root := p.Root()
-	lcl := root.LongestChainLength()
-	parentNamePrefix := NumericalTerm(lcl)
+
 	if parentNamePrefix[len(parentNamePrefix)-1] == 'a' {
 		parentNamePrefix = parentNamePrefix[:len(parentNamePrefix)-1]
 	}
-	parentName := parentNamePrefix + "ane"
-	return parentName, nil
+
+	parentName := ""
+	if n.Branch {
+		parentName = parentNamePrefix + "yl"
+	} else {
+		parentName = parentNamePrefix + "ane"
+	}
+
+	// complexSubstituentNodes := []*tree.Node{}
+	// for i := range chain {
+	// 	substituents := chain[i].Branches()
+	// 	if len(substituents) == 0 {
+	// 		continue
+	// 	}
+	// 	for j := range substituents {
+	// 		if len(substituents[j].Branches()) > 0 {
+	// 			nn := New(substituents[j], true)
+	// 			complexSubstituent, err := nn.SystematicName()
+	// 			if err != nil {
+	// 				return "", err
+	// 			}
+	// 			complexSubstituent = complexSubstituent
+	// 		}
+	// 	}
+	// }
+
+	substituents := root.BranchLocations()
+
+	temp := parentName
+
+	branchPrefixes := []branchPrefix{}
+	for nCarbon, locations := range substituents {
+		branchPrefixes = append(branchPrefixes, BranchPrefix(nCarbon, locations))
+	}
+	sort.Slice(branchPrefixes, func(i, j int) bool {
+		r := strings.Compare(branchPrefixes[i].base, branchPrefixes[j].base)
+		return r == -1
+	})
+
+	branchPrefixStrings := []string{}
+	for i := range branchPrefixes {
+		branchPrefixStrings = append(branchPrefixStrings, branchPrefixes[i].String())
+	}
+	temp = strings.Join(branchPrefixStrings, "-") + temp
+
+	return temp, nil
+}
+
+type substituentNamer struct {
+	location     int
+	base         string
+	multiplier   string
+	substituents []substituentNamer
+}
+
+// type complexSubstituent struct {
+// 	location int
+// 	base     string
+// }
+
+type branchPrefix struct {
+	locations  []int
+	base       string
+	multiplier string
+	// prefix     string
+}
+
+func (bp branchPrefix) String() string {
+	sort.Ints(bp.locations)
+	locations := []string{}
+	for _, l := range bp.locations {
+		locations = append(locations, fmt.Sprintf("%d", l))
+	}
+	locationsString := strings.Join(locations, ",")
+	return fmt.Sprintf("%s-%s%syl", locationsString, bp.multiplier, bp.base)
+}
+
+func BranchPrefix(nCarbon int, locations []int) branchPrefix {
+	prefix := ""
+	if len(locations) == 2 {
+		prefix = "di"
+	} else if len(locations) > 2 {
+		prefix = NumericalTerm(len(locations))
+	}
+
+	base := ""
+	if nCarbon <= 20 {
+		base = PREFIXES[nCarbon]
+	} else {
+		base = NumericalTerm(nCarbon)
+	}
+	return branchPrefix{locations, base, prefix}
 }
 
 func NumericalTerm(nCarbon int) string {
-	if nCarbon <= 20 {
-		return PREFIXES[nCarbon]
-	}
 	numerals := make([]string, 0, 4)
 	m := 1
 	for i := 0; i < 4; i++ {
@@ -108,9 +201,6 @@ func NumericalTerm(nCarbon int) string {
 	}
 	for i, val := range numerals {
 		if i == len(numerals)-1 {
-			if val[len(val)-1] == 'a' {
-				numerals[i] = val[:len(val)-1]
-			}
 			break
 		}
 		if val[len(val)-1] == numerals[i+1][0] {
