@@ -143,18 +143,6 @@ func (n *Namer) SystematicName() (string, error) {
 	return temp, nil
 }
 
-type substituentNamer struct {
-	location     int
-	base         string
-	multiplier   string
-	substituents []substituentNamer
-}
-
-// type complexSubstituent struct {
-// 	location int
-// 	base     string
-// }
-
 type branchPrefix struct {
 	locations  []int
 	base       string
