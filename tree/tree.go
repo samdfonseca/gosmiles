@@ -77,6 +77,10 @@ func (n *Node) Branches() []*Node {
 // information needed to produce branch naming. If a branch is closer to the end of the chain than any branch is to the
 // beginning of the chain, the location numbering is reversed to ensure the lowest possible numbers for the position of
 // the branches.
+//
+// !!!!THIS ONLY WORKS FOR MOLECULES WITH STRAIGHT BRANCHES!!!!
+// For molecules with complex branches (branches that have branches), such as 4-(1,1-dimethylethyl)-5-ethylnonane,
+// we need to know more than just branch length.
 func (n *Node) BranchLocations() map[int][]int {
 	i := 2
 	substituents := make(map[int][]int)
